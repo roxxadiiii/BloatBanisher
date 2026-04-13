@@ -1,0 +1,41 @@
+name: roxx-gitSYNC
+
+on:
+  push:
+    branches: ['**']
+    tags: ['**']
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout full repo (IMPORTANT)
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 2. Push to Codeberg (HTTPS + token)
+      - name: Push to Codeberg
+        run: |
+          git remote add codeberg https://$CODEBERG_TOKEN@codeberg.org/roxxadiiii/BloatBanisher.git
+          git push --mirror codeberg || echo "Codeberg push failed"
+        env:
+          CODEBERG_TOKEN: ${{ secrets.CODEBERG_TOKEN }}
+
+      # 3. Setup SSH for SourceHut
+      - name: Setup SSH for SourceHut
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SOURCEHUT_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan git.sr.ht >> ~/.ssh/known_hosts
+        env:
+          SOURCEHUT_SSH_KEY: ${{ secrets.SOURCEHUT_SSH_KEY }}
+
+      # 4. Push to SourceHut (SSH)
+      - name: Push to SourceHut
+        run: |
+          git remote add sourcehut git@git.sr.ht:~roxxadiiii/BloatBanisher
+          git push --mirror sourcehut || echo "SourceHut push failed"
